@@ -1,4 +1,4 @@
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from flask import Flask, render_template_string, render_template, jsonify
 from flask import render_template
 from flask import json
@@ -27,6 +27,38 @@ def decryptage(valeur):
         return f"Valeur décryptée : {decrypted.decode()}"
     except:
         return "Erreur : valeur non déchiffrable"
+@app.route('/generate-key/', methods=['GET'])
+def generate_key():
+    key = Fernet.generate_key().decode()
+    return jsonify({'key': key})
+@app.route('/encrypt/', methods=['POST'])
+def encrypt_post():
+    try:
+        data = request.get_json()
+        key = data['key'].encode()
+        message = data['message'].encode()
+
+        f = Fernet(key)
+        encrypted_token = f.encrypt(message).decode()
+        return jsonify({'encrypted_token': encrypted_token})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/decrypt/', methods=['POST'])
+def decrypt_post():
+    try:
+        data = request.get_json()
+        key = data['key'].encode()
+        token = data['token'].encode()
+
+        f = Fernet(key)
+        decrypted_message = f.decrypt(token).decode()
+        return jsonify({'decrypted_message': decrypted_message})
+    except InvalidToken:
+        return jsonify({'error': 'Token invalide ou clé incorrecte'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+      
                                                                                                                                                      
 if __name__ == "__main__":
   app.run(debug=True)
